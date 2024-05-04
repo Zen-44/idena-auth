@@ -1,11 +1,10 @@
+import os
 from flask import Flask, jsonify, request, send_from_directory
 from eth_keys.main import PublicKey, Signature
 from Crypto.Hash import keccak
-import os
 from dotenv import load_dotenv
 import utils.db as db
 from utils.logger import get_logger
-import sys
 
 app = Flask(__name__)
 

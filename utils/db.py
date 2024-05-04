@@ -1,6 +1,6 @@
 import sqlite3
-from utils.logger import get_logger
 import secrets
+from utils.logger import get_logger
 
 log = get_logger("DB")
 

@@ -270,7 +270,7 @@ async def on_guild_join(guild):
 
 @bot.event
 async def on_guild_remove(guild):
-    await db.remove_guild(guild.id)
+    log.info(f"Bot was removed from guild {guild}")
 
 @bot.event
 async def on_slash_command_error(ctx, error):

@@ -224,11 +224,6 @@ async def login(cmd: disnake.CommandInteraction):
 @commands.cooldown(3, 60, commands.BucketType.user)
 @bot.slash_command(description = "Update your roles")
 async def update(cmd: disnake.CommandInteraction):
-    # check if the user is logged in
-    if await db.get_user_address(cmd.author.id) is None:
-        description = "You are not logged in! Use the /login command to log in."
-        embed = Embed(title = ":x: Not Logged In", description = description, color = 0xFF0000)
-        return await cmd.response.send_message(embed = embed, ephemeral = True)
     await update_role(cmd.guild.id, cmd.author.id)
     description = f"Your roles have been updated!\nYou are logged in as `{await db.get_user_address(cmd.author.id)}`"
     embed = Embed(title = ":white_check_mark: Roles Updated", description = description, color = 0x00ff00)

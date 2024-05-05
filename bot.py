@@ -138,7 +138,7 @@ async def bindrole(cmd: disnake.CommandInteraction, status: str, role: disnake.R
     if (await db.get_role_bindings(cmd.guild.id))[status.lower()] != None and not force:
         # Role is already bound
         description = f"This status already has a role bound to it.\nIf you want to change it, run the command again with force set to true.\nThe bot will no longer handle the old role (needs to be removed manually)."
-        embed = Embed(title="Role Already Bound", description=description, color=0xFF0000)
+        embed = Embed(title = "Role Already Bound", description = description, color = 0xdd2e44)
         return await cmd.response.send_message(embed = embed)
 
     # bind the role
@@ -146,7 +146,7 @@ async def bindrole(cmd: disnake.CommandInteraction, status: str, role: disnake.R
         status = "Not Validated"
     await db.bind_role(cmd.guild.id, status, role.id)
     description = f"Role <@&{role.id}> was bound to Idena status **{status}**!\nPlease note that it may take a bit for the changes to reflect due to caching."
-    embed = Embed(title=":white_check_mark: Role Bound", description=description, color=0x00FF00)
+    embed = Embed(title = ":white_check_mark: Role Bound", description = description, color = 0x77b255)
     await cmd.response.send_message(embed = embed)
 
 #
@@ -175,7 +175,7 @@ async def getbindings(cmd: disnake.CommandInteraction):
         **Zombie:** {role_bindings['zombie']}
 
         **Bot Manager**: {role_bindings['bot_manager']}""")
-    embed = Embed(title = "Role Bindings", description = description, color = 0x00ff00)
+    embed = Embed(title = "Role Bindings", description = description, color = 0x77b255)
     await cmd.response.send_message(embed = embed)
 
 #
@@ -188,7 +188,7 @@ async def setbotmanager(cmd: disnake.CommandInteraction, role: disnake.Role):
 
     await db.set_bot_manager(cmd.guild.id, role.id)
     description = f"Bot manager role set to <@&{role.id}>"
-    embed = Embed(title = ":white_check_mark: Bot Manager Role Set", description = description, color = 0x00ff00)
+    embed = Embed(title = ":white_check_mark: Bot Manager Role Set", description = description, color = 0x77b255)
     await cmd.response.send_message(embed = embed)
 
 #
@@ -202,7 +202,7 @@ async def forceupdateall(cmd: disnake.CommandInteraction):
 
     await update_all_roles(cmd.guild.id)
     description = "Roles have been updated for all users!"
-    embed = Embed(title = ":white_check_mark: Roles Updated", description = description, color = 0x00ff00)
+    embed = Embed(title = ":white_check_mark: Roles Updated", description = description, color = 0x77b255)
     await cmd.response.send_message(embed = embed)
 
 #
@@ -223,7 +223,7 @@ async def login(cmd: disnake.CommandInteraction):
         return await cmd.response.send_message(embed = embed, ephemeral = True)
 
     description = f"In order to log in, [authenticate with Idena]({URL})"
-    embed = Embed(title = "Login with Idena", description = description, color = 0x00ff00)
+    embed = Embed(title = "Login with Idena", description = description, color = 0x77b255)
     await cmd.response.send_message(embed = embed, ephemeral = True)
 
 #
@@ -236,11 +236,11 @@ async def update(cmd: disnake.CommandInteraction):
 
     if role_id == "":
         description = "You are not logged in!"
-        embed = Embed(title = ":x: Not Logged In", description = description, color = 0xFF0000)
+        embed = Embed(title = ":x: Not Logged In", description = description, color = 0xdd2e44)
         return await cmd.response.send_message(embed = embed, ephemeral = True)
     
     description = f"Your role has been updated to <@&{role_id}>!\nYou are logged in as `{await db.get_user_address(cmd.author.id)}`"
-    embed = Embed(title = ":white_check_mark: Roles Updated", description = description, color = 0x00ff00)
+    embed = Embed(title = ":white_check_mark: Roles Updated", description = description, color = 0x77b255)
     await cmd.response.send_message(embed = embed, ephemeral = True)
 
 
@@ -253,7 +253,7 @@ async def logout(cmd: disnake.CommandInteraction):
     # check if the user is logged in
     if await db.get_user_address(cmd.author.id) is None:
         description = "You are not logged in!"
-        embed = Embed(title = ":x: Not Logged In", description = description, color = 0xFF0000)
+        embed = Embed(title = ":x: Not Logged In", description = description, color = 0xdd2e44)
         return await cmd.response.send_message(embed = embed, ephemeral = True)
     
     # remove user from database and remove roles from all guilds
@@ -268,7 +268,7 @@ async def logout(cmd: disnake.CommandInteraction):
 
     log.info(f"User {discord_id} logged out!")
     description = "You have been logged out from all servers!"
-    embed = Embed(title = ":white_check_mark: Logged Out", description = description, color = 0x00ff00)
+    embed = Embed(title = ":white_check_mark: Logged Out", description = description, color = 0x77b255)
     await cmd.response.send_message(embed = embed, ephemeral = True)
 
 @bot.before_slash_command_invoke
@@ -289,16 +289,16 @@ async def on_slash_command_error(ctx, error):
     if isinstance(error, commands.CommandOnCooldown):
         log.info(f"User {ctx.author} was rate limited on command {ctx.data.name} in guild {ctx.guild}")
         description = f"This command is on cooldown. Try again in {error.retry_after:.0f} seconds."
-        embed = Embed(title = ":x: Command on Cooldown", description = description, color = 0xFF0000)
+        embed = Embed(title = ":x: Command on Cooldown", description = description, color = 0xdd2e44)
         await ctx.response.send_message(embed = embed, ephemeral = True)
     else:
         if ctx.guild is None:
             description = f"You can not use this command in a DM channel."
-            embed = Embed(title = ":x: Error", description = description, color = 0xFF0000)
+            embed = Embed(title = ":x: Error", description = description, color = 0xdd2e44)
             return await ctx.response.send_message(embed = embed, ephemeral = True)
         log.error(f"An error occurred in command {ctx.data.name} in guild {ctx.guild}: {error}")
         description = f"Something went wrong! :("
-        embed = Embed(title = ":x: Error", description = description, color = 0xFF0000)
+        embed = Embed(title = ":x: Error", description = description, color = 0xdd2e44)
         await ctx.response.send_message(embed = embed, ephemeral = True)
         
 @bot.event

@@ -57,7 +57,7 @@ async def update_role(guild_id, discord_id):
 
     member = guild.get_member(int(discord_id))
     if member is None:
-        log.warning(f"Member {discord_id} not found in guild {guild_id}")
+        log.info(f"Member {discord_id} not found in guild {guild_id}")
         return
 
     role = guild.get_role(int(role_id))
@@ -110,9 +110,10 @@ async def scheduled_update(hour, minute):
         await update_all_roles()
         await db.clean()
 
-async def protect(cmd: disnake.CommandInteraction):
+async def protect(cmd: disnake.CommandInteraction): # TODO embed message
     # checks if the user has permission to use the command
-    if not cmd.author.guild_permissions.administrator and await db.get_bot_manager(cmd.guild.id) not in [role.id for role in cmd.author.roles]:
+    bot_manager = await db.get_bot_manager(cmd.guild.id)
+    if not cmd.author.guild_permissions.administrator and (bot_manager != None or bot_manager not in [role.id for role in cmd.author.roles]):
         log.warning(f"User {cmd.author} tried to use a command without permission")
         return await cmd.response.send_message("You do not have permission to use this command")
     return 1

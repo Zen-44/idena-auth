@@ -9,7 +9,7 @@ conn = sqlite3.connect("bot.db", check_same_thread = False)
 cursor = conn.cursor()
 
 cursor.execute("CREATE TABLE IF NOT EXISTS guilds (guild_id TEXT PRIMARY KEY, undefined_role_id TEXT, newbie_role_id TEXT, verified_role_id TEXT, human_role_id TEXT, suspended_role_id TEXT, zombie_role_id TEXT, bot_manager_role_id TEXT)")
-cursor.execute("CREATE TABLE IF NOT EXISTS users (user_id TEXT PRIMARY KEY, address TEXT)") # discord user id
+cursor.execute("CREATE TABLE IF NOT EXISTS users (user_id TEXT PRIMARY KEY, address TEXT UNIQUE)") # discord user id
 cursor.execute("CREATE TABLE IF NOT EXISTS pending_auth (user_id TEXT PRIMARY KEY, token TEXT UNIQUE NOT NULL, address TEXT, nonce TEXT, created DATETIME DEFAULT CURRENT_TIMESTAMP)")
 
 async def add_guild(guild_id: str):
@@ -27,9 +27,12 @@ async def set_bot_manager(guild_id: str, role_id: str):
     log.info(f"Set bot manager role {role_id} in guild {guild_id}")
     conn.commit()
 
+@cached(ttl = 15)
 async def get_bot_manager(guild_id: str):
     cursor.execute("SELECT bot_manager_role_id FROM guilds WHERE guild_id = ?", (guild_id,))
     bot_manager = cursor.fetchone()
+    if bot_manager is None:
+        return None
     return bot_manager[0]
 
 async def bind_role(guild_id: str, status: str, role_id: str):
@@ -41,11 +44,11 @@ async def bind_role(guild_id: str, status: str, role_id: str):
 
 @cached(ttl = 15)
 async def get_role_bindings(guild_id: str):
+    if await guild_exists(guild_id) is False:
+        return {"undefined": None, "newbie": None, "verified": None, "human": None, "suspended": None, "zombie": None}
+    
     cursor.execute("SELECT * FROM guilds WHERE guild_id = ?", (guild_id,))
     guild_roles = cursor.fetchone()
-    if guild_roles is None:             # should probably perform this check in other cases too
-        await add_guild(guild_id)
-        return {"undefined": None, "newbie": None, "verified": None, "human": None, "suspended": None, "zombie": None}
     role_bindings = {"undefined": guild_roles[1], "newbie": guild_roles[2], "verified": guild_roles[3], "human": guild_roles[4], "suspended": guild_roles[5], "zombie": guild_roles[6]}
     return role_bindings
 
@@ -60,6 +63,14 @@ async def get_guilds():
     cursor.execute("SELECT guild_id FROM guilds")
     guilds = cursor.fetchall()
     return guilds
+
+async def guild_exists(guild_id: str) -> bool:
+    cursor.execute("SELECT * FROM guilds WHERE guild_id = ?", (guild_id,))
+    guild = cursor.fetchone()
+    if guild is None:
+        await add_guild(guild_id)
+        return False
+    return True
 
 # Auth functions
 

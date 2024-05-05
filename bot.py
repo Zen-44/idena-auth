@@ -141,7 +141,7 @@ async def bindrole(cmd: disnake.CommandInteraction, status: str, role: disnake.R
     if status == "undefined":
         status = "Not Validated"
     await db.bind_role(cmd.guild.id, status, role.id)
-    description = f"Role <@&{role.id}> was bound to Idena status **{status}**!"
+    description = f"Role <@&{role.id}> was bound to Idena status **{status}**!\nPlease note that it may take a bit for the changes to reflect in /getbindings due to caching."
     embed = Embed(title=":white_check_mark: Role Bound", description=description, color=0x00FF00)
     await cmd.response.send_message(embed = embed)
 

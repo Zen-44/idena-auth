@@ -1,5 +1,6 @@
 import sqlite3
 import secrets
+from aiocache import cached
 from utils.logger import get_logger
 
 log = get_logger("DB")
@@ -38,6 +39,7 @@ async def bind_role(guild_id: str, status: str, role_id: str):
     log.info(f"Bound role {role_id} to Idena status {status} in guild {guild_id}")
     conn.commit()
 
+@cached(ttl = 15)
 async def get_role_bindings(guild_id: str):
     cursor.execute("SELECT * FROM guilds WHERE guild_id = ?", (guild_id,))
     guild_roles = cursor.fetchone()

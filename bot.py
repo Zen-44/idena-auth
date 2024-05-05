@@ -59,7 +59,7 @@ async def update_role(guild_id, discord_id):
     if member is None:
         log.warning(f"Member {discord_id} not found in guild {guild_id}")
         return
-    
+
     role = guild.get_role(int(role_id))
     if role is None:
         log.error(f"Role {role_id} not found in guild {guild_id}")
@@ -98,7 +98,7 @@ async def update_all_roles(guild_id = None):
     log.info("All roles updated")
 
 async def scheduled_update(hour, minute):
-    # scheduled update for all members
+    # scheduled update for all members and cleanup pending auths
     while True:
         now = datetime.now()
         target_time = now.replace(hour = hour, minute = minute, second = 0)
@@ -108,6 +108,7 @@ async def scheduled_update(hour, minute):
         wait_seconds = (target_time - now).total_seconds()
         await asyncio.sleep(wait_seconds)
         await update_all_roles()
+        await db.clean()
 
 async def protect(cmd: disnake.CommandInteraction):
     # checks if the user has permission to use the command
@@ -201,13 +202,15 @@ async def forceupdateall(cmd: disnake.CommandInteraction):
     await cmd.response.send_message(embed = embed)
 
 #
-# login command  TODO do not allow logins if not initiated by the user
+# login command
 #
+@commands.cooldown(3, 60, commands.BucketType.user)
 @bot.slash_command(description = "Log in with Idena")
 async def login(cmd: disnake.CommandInteraction):
     # create auth URL
     discord_id = str(cmd.author.id)
-    URL = "https://app.idena.io/dna/signin?token=" + discord_id + "&callback_url=" + AUTH_URL +  "&nonce_endpoint=" + AUTH_URL + "/start-session" + "&authentication_endpoint=" + AUTH_URL + "/authenticate" + "&favicon_url=" + AUTH_URL + "/favicon.ico"
+    token = await db.generate_token(discord_id)
+    URL = "https://app.idena.io/dna/signin?token=" + token + "&callback_url=" + AUTH_URL +  "&nonce_endpoint=" + AUTH_URL + "/start-session" + "&authentication_endpoint=" + AUTH_URL + "/authenticate" + "&favicon_url=" + AUTH_URL + "/favicon.ico"
 
     # check if the user is already logged in
     if await db.get_user_address(cmd.author.id) is not None:

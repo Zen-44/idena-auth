@@ -9,7 +9,7 @@ cursor = conn.cursor()
 
 cursor.execute("CREATE TABLE IF NOT EXISTS guilds (guild_id TEXT PRIMARY KEY, undefined_role_id TEXT, newbie_role_id TEXT, verified_role_id TEXT, human_role_id TEXT, suspended_role_id TEXT, zombie_role_id TEXT, bot_manager_role_id TEXT)")
 cursor.execute("CREATE TABLE IF NOT EXISTS users (user_id TEXT PRIMARY KEY, address TEXT)") # discord user id
-cursor.execute("CREATE TABLE IF NOT EXISTS pending_auth (user_id TEXT PRIMARY KEY, address TEXT, nonce TEXT)")
+cursor.execute("CREATE TABLE IF NOT EXISTS pending_auth (user_id TEXT PRIMARY KEY, token TEXT UNIQUE NOT NULL, address TEXT, nonce TEXT, created DATETIME DEFAULT CURRENT_TIMESTAMP)")
 
 async def add_guild(guild_id: str):
     cursor.execute("INSERT INTO guilds (guild_id) VALUES (?)", (guild_id,))
@@ -61,29 +61,47 @@ async def get_guilds():
 
 # Auth functions
 
-async def generate_nonce(user_id: str, address: str) -> str:
-    nonce = "signin-" + secrets.token_hex(16)
+async def generate_token(user_id: str) -> str:
+    token = secrets.token_hex(16)
     cursor.execute("DELETE FROM pending_auth WHERE user_id = ?", (user_id,))
-    cursor.execute("INSERT INTO pending_auth (user_id, address, nonce) VALUES (?, ?, ?)", (user_id, address, nonce))
+    cursor.execute("INSERT INTO pending_auth (user_id, token) VALUES (?, ?)", (user_id, token))
     conn.commit()
+    log.info(f"Generated token {token} for user {user_id}")
+    return token
+
+async def generate_nonce(token: str, address: str) -> str:
+    nonce = "signin-" + secrets.token_hex(16)
+    cursor.execute("UPDATE pending_auth SET nonce = ?, address = ? WHERE token = ?", (nonce, address, token))
+    conn.commit()
+    log.info(f"Generated nonce {nonce} for token {token}")
     return nonce
 
 async def set_user(user_id: str, address: str):
     cursor.execute("DELETE FROM users WHERE user_id = ?", (user_id,))
     cursor.execute("INSERT INTO users (user_id, address) VALUES (?, ?)", (user_id, address))
     conn.commit()
+    log.info(f"Set user {user_id} to address {address}")
 
 async def delete_user(user_id: str):
     cursor.execute("DELETE FROM users WHERE user_id = ?", (user_id,))
     conn.commit()
 
-async def get_nonce(user_id: str) -> str:
-    cursor.execute("SELECT nonce FROM pending_auth WHERE user_id = ?", (user_id,))
+async def get_discord_id(token: str) -> str:
+    cursor.execute("SELECT user_id FROM pending_auth WHERE token = ?", (token,))
+    user_id = cursor.fetchone()
+    if user_id is None:
+        return None
+    return user_id[0]
+
+async def get_nonce(token: str) -> str:
+    cursor.execute("SELECT nonce FROM pending_auth WHERE token = ?", (token,))
     nonce = cursor.fetchone()
+    if nonce is None:
+        return None
     return nonce[0]
 
-async def get_pending_address(user_id: str) -> str:
-    cursor.execute("SELECT address FROM pending_auth WHERE user_id = ?", (user_id,))
+async def get_pending_address(token: str) -> str:
+    cursor.execute("SELECT address FROM pending_auth WHERE token = ?", (token,))
     address = cursor.fetchone()
     if address is None:
         return None
@@ -101,6 +119,13 @@ async def get_user_address(user_id: str) -> str:
         return None
     return address[0]
 
-async def remove_pending_auth(user_id: str):
-    cursor.execute("DELETE FROM pending_auth WHERE user_id = ?", (user_id,))
+async def remove_pending_auth(token: str):
+    cursor.execute("DELETE FROM pending_auth WHERE token = ?", (token,))
     conn.commit()
+
+# cleanup function
+async def clean():
+    cursor.execute("DELETE FROM pending_auth WHERE created < datetime('now', '-1 hour')")
+    rows_deleted = cursor.rowcount
+    conn.commit()
+    log.info(f"Cleaned up {rows_deleted} expired tokens")

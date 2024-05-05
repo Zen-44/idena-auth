@@ -41,9 +41,16 @@ def index():
 @app.route("/start-session", methods=["POST"])
 async def start_session():
     req = request.get_json()
-    discord_id = req["token"]
+    token = req["token"]
     address = req["address"]
-    nonce = await db.generate_nonce(discord_id, address)
+    nonce = await db.generate_nonce(token, address)
+    discord_id = await db.get_discord_id(token)
+    if (discord_id is None):
+        log.info(f"Invalid token {token}")
+        return jsonify({
+            "success": False,
+            "error": "Invalid token"
+        })
 
     log.info(f"Begin authentication for user {discord_id}")
 
@@ -57,7 +64,6 @@ async def start_session():
 @app.route("/authenticate", methods=["POST"])
 async def authenticate():
     req = request.get_json()
-    address = await db.get_pending_address(req['token'])
 
     if not await validate_sig(req):
         log.info(f"Invalid signature for user {req['token']}")
@@ -66,10 +72,12 @@ async def authenticate():
             "error": "Invalid signature"
         })
     
-    await db.set_user(req['token'], address)
+    address = await db.get_pending_address(req['token'])
+    user_id = await db.get_discord_id(req['token'])
+    await db.set_user(user_id, address)
     await db.remove_pending_auth(req['token'])
 
-    log.info(f"User {req['token']} successfully authenticated as {address}")
+    log.info(f"User {user_id} successfully authenticated as {address}")
 
     return jsonify({
       "success": True,

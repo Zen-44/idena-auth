@@ -71,14 +71,24 @@ async def authenticate():
         log.info(f"Invalid signature for user {req['token']}")
         return jsonify({
             "success": False,
-            "error": "Invalid signature"
+            "data":{
+                "authenticated": False,
+                "error": "Invalid signature"
+            }
         })
     
     address = await db.get_pending_address(req['token'])
     user_id = await db.get_discord_id(req['token'])
-    await db.set_user(user_id, address)
+    if not await db.set_user(user_id, address):
+        return jsonify({
+            "success": False,
+            "data": {
+                "authenticated": False,
+                "error": "Address was registered already"
+            }
+        })
+    
     await db.remove_pending_auth(req['token'])
-
     log.info(f"User {user_id} successfully authenticated as {address}")
 
     return jsonify({

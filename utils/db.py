@@ -90,10 +90,16 @@ async def generate_nonce(token: str, address: str) -> str:
     return nonce
 
 async def set_user(user_id: str, address: str):
-    cursor.execute("DELETE FROM users WHERE user_id = ?", (user_id,))
-    cursor.execute("INSERT INTO users (user_id, address) VALUES (?, ?)", (user_id, address))
+    try:
+        cursor.execute("DELETE FROM users WHERE user_id = ?", (user_id,))
+        cursor.execute("INSERT INTO users (user_id, address) VALUES (?, ?)", (user_id, address))
+    except sqlite3.IntegrityError:
+        log.warning(f"User {user_id} tried to login with an already existing address: {address}")
+        conn.rollback()
+        return False
     conn.commit()
     log.info(f"Set user {user_id} to address {address}")
+    return True
 
 async def delete_user(user_id: str):
     cursor.execute("DELETE FROM users WHERE user_id = ?", (user_id,))

@@ -9,6 +9,8 @@ from utils.logger import get_logger
 app = Flask(__name__)
 
 log = get_logger("AUTH")
+app.logger.setLevel("INFO")
+app.logger.addHandler(log)
 
 load_dotenv(override = True)
 SITE_URL = os.getenv("AUTH_URL")
@@ -43,8 +45,9 @@ async def start_session():
     req = request.get_json()
     token = req["token"]
     address = req["address"]
-    nonce = await db.generate_nonce(token, address)
     discord_id = await db.get_discord_id(token)
+    log.info(f"Begin authentication for user {discord_id}")
+
     if (discord_id is None):
         log.info(f"Invalid token {token}")
         return jsonify({
@@ -52,8 +55,7 @@ async def start_session():
             "error": "Invalid token"
         })
 
-    log.info(f"Begin authentication for user {discord_id}")
-
+    nonce = await db.generate_nonce(token, address)
     return jsonify({
         "success": True,
         "data": {

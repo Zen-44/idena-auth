@@ -1,5 +1,6 @@
 import os
 import asyncio
+import textwrap
 import disnake
 from disnake import Option, OptionType, Embed
 from disnake.ext import commands
@@ -160,7 +161,7 @@ async def getbindings(cmd: disnake.CommandInteraction):
     else:
         role_bindings["bot_manager"] = "Not set"
 
-    description = f"""
+    description = textwrap.dedent(f"""
         **Not Validated:** {role_bindings['undefined']}
         **Newbie:** {role_bindings['newbie']}
         **Verified:** {role_bindings['verified']}
@@ -168,7 +169,7 @@ async def getbindings(cmd: disnake.CommandInteraction):
         **Suspended:** {role_bindings['suspended']}
         **Zombie:** {role_bindings['zombie']}
 
-        **Bot Manager**: {role_bindings['bot_manager']}"""
+        **Bot Manager**: {role_bindings['bot_manager']}""")
     embed = Embed(title = "Role Bindings", description = description, color = 0x00ff00)
     await cmd.response.send_message(embed = embed)
 

@@ -36,9 +36,17 @@ async def validate_sig(body):
 def favicon():
     return send_from_directory("resources", "favicon.ico", mimetype='image/vnd.microsoft.icon')
 
+@app.route("/resources/bot_img.png")
+def bot_img():
+    return send_from_directory("resources", "bot_img.png", mimetype='image/png')
+
 @app.route("/")
 def index():
     return send_from_directory("resources", "index.html")
+
+@app.route("/success")
+def success_page():
+    return send_from_directory("resources", "success.html")
 
 @app.route("/start-session", methods=["POST"])
 async def start_session():

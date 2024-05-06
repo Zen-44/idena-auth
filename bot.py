@@ -214,7 +214,7 @@ async def login(cmd: disnake.CommandInteraction):
     # create auth URL
     discord_id = str(cmd.author.id)
     token = await db.generate_token(discord_id)
-    URL = "https://app.idena.io/dna/signin?token=" + token + "&callback_url=" + AUTH_URL +  "&nonce_endpoint=" + AUTH_URL + "/start-session" + "&authentication_endpoint=" + AUTH_URL + "/authenticate" + "&favicon_url=" + AUTH_URL + "/favicon.ico"
+    URL = "https://app.idena.io/dna/signin?token=" + token + "&callback_url=" + AUTH_URL + "/success" +  "&nonce_endpoint=" + AUTH_URL + "/start-session" + "&authentication_endpoint=" + AUTH_URL + "/authenticate" + "&favicon_url=" + AUTH_URL + "/favicon.ico"
 
     # check if the user is already logged in
     if await db.get_user_address(cmd.author.id) is not None:

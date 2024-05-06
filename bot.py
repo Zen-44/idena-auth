@@ -219,7 +219,7 @@ async def login(cmd: disnake.CommandInteraction):
     # check if the user is already logged in
     if await db.get_user_address(cmd.author.id) is not None:
         description = f"You are already logged in as `{await db.get_user_address(cmd.author.id)}`!\nIf you want to switch accounts, you can proceed [signing in with Idena]({URL})"
-        embed = Embed(title = ":yellow_square: Already Logged In", description = description, color = 0xFFFF00)
+        embed = Embed(title = ":yellow_square: Already Logged In", description = description, color = 0xfdcb58)
         return await cmd.response.send_message(embed = embed, ephemeral = True)
 
     description = f"In order to log in, [authenticate with Idena]({URL})"

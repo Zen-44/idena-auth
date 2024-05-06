@@ -112,6 +112,7 @@ async def scheduled_update(hour, minute):
         await asyncio.sleep(wait_seconds)
         await update_all_roles()
         await db.clean()
+        await bot.change_presence(activity = disnake.Activity(type = disnake.ActivityType.watching, name = f"{len(await db.get_all_users())} Idena identities"))
 
 async def protect(cmd: disnake.CommandInteraction):
     # checks if the user has permission to use the command
@@ -304,6 +305,8 @@ async def on_slash_command_error(ctx, error):
 @bot.event
 async def on_ready():
     log.info(f"Logged in as {bot.user}")
+    user_count = len(await db.get_all_users())
+    await bot.change_presence(activity = disnake.Activity(type = disnake.ActivityType.watching, name = f"{user_count} Idena identities"))
     asyncio.create_task(scheduled_update(15, 45))
 
 bot.run(DISCORD_TOKEN)

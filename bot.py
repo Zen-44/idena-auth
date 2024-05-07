@@ -101,18 +101,26 @@ async def update_all_roles(guild_id = None):
     log.info("All roles updated")
 
 async def scheduled_update(hour, minute):
-    # scheduled update for all members and cleanup pending auths
+    # scheduled role update for all members
     while True:
         now = datetime.now()
         target_time = now.replace(hour = hour, minute = minute, second = 0)
         if now >= target_time:
-            target_time += timedelta(days=1)
-        log.info(f"Next scheduled status update at {target_time}")
+            target_time += timedelta(days = 1)
+        log.info(f"Next scheduled identities update at {target_time}")
         wait_seconds = (target_time - now).total_seconds()
         await asyncio.sleep(wait_seconds)
+        
         await update_all_roles()
+
+async def hourly_update():
+    # hourly update for bot status and database cleaning
+    while True:
+        log.info("HOURLY UPDATE")
         await db.clean()
-        await bot.change_presence(activity = disnake.Activity(type = disnake.ActivityType.watching, name = f"{len(await db.get_all_users())} Idena identities"))
+        user_count = len(await db.get_all_users())
+        await bot.change_presence(activity = disnake.Activity(type = disnake.ActivityType.watching, name = f"{user_count} Idena identities"))
+        await asyncio.sleep(60 * 60)
 
 async def protect(cmd: disnake.CommandInteraction):
     # checks if the user has permission to use the command
@@ -305,8 +313,7 @@ async def on_slash_command_error(ctx, error):
 @bot.event
 async def on_ready():
     log.info(f"Logged in as {bot.user}")
-    user_count = len(await db.get_all_users())
-    await bot.change_presence(activity = disnake.Activity(type = disnake.ActivityType.watching, name = f"{user_count} Idena identities"))
     asyncio.create_task(scheduled_update(15, 45))
+    asyncio.create_task(hourly_update())
 
 bot.run(DISCORD_TOKEN)

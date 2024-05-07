@@ -147,4 +147,5 @@ async def clean():
     cursor.execute("DELETE FROM pending_auth WHERE created < datetime('now', '-1 hour')")
     rows_deleted = cursor.rowcount
     conn.commit()
-    log.info(f"Cleaned up {rows_deleted} expired tokens")
+    if rows_deleted > 0:
+        log.info(f"Cleaned up {rows_deleted} expired tokens")

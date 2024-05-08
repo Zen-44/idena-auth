@@ -67,9 +67,9 @@ async def update_role(guild_id, discord_id) -> str:
     # remove other (bound) roles
     for old_role in member.roles:
         if str(old_role.id) in list((await db.get_role_bindings(guild_id)).values()):
-            log.info(f"Removing role {old_role.name} from member {discord_id}")
             try:
                 await member.remove_roles(old_role)
+                log.info(f"Removed role {old_role.name} from member {discord_id}")
             except Exception as e:
                 log.error(f"Error removing role {old_role.name} from member {discord_id}: {e}")
     

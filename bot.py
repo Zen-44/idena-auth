@@ -208,11 +208,14 @@ async def setbotmanager(cmd: disnake.CommandInteraction, role: disnake.Role):
 async def forceupdateall(cmd: disnake.CommandInteraction):
     if await protect(cmd) != 1:
         return
+    
+    await cmd.response.defer()
 
     await update_all_roles(cmd.guild.id)
+
     description = "Roles have been updated for all users!"
     embed = Embed(title = ":white_check_mark: Roles Updated", description = description, color = 0x77b255)
-    await cmd.response.send_message(embed = embed)
+    await cmd.edit_original_message(embed = embed)
 
 #
 # login command

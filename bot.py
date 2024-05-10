@@ -218,6 +218,29 @@ async def forceupdateall(cmd: disnake.CommandInteraction):
     await cmd.edit_original_message(embed = embed)
 
 #
+# send bot interactive message
+#
+@bot.slash_command(description = "Send a message with buttons for users to click")
+async def send_interactive_message(cmd: disnake.CommandInteraction, channel: disnake.TextChannel):
+    if await protect(cmd) != 1:
+        return
+
+    # create buttons
+    login_button = disnake.ui.Button(style = disnake.ButtonStyle.primary, label = "Login", custom_id = "login")
+    update_button = disnake.ui.Button(style = disnake.ButtonStyle.primary, label = "Update my roles", custom_id = "update")
+    logout_button = disnake.ui.Button(style = disnake.ButtonStyle.danger, label = "Logout", custom_id = "logout")
+
+    # create interactive message
+    idena_emoji = bot.get_emoji(685155510131097625)
+    description = "This server uses an Idena Identity verification system.\nYou can obtain roles based on your Idena status by signing in with Idena using the buttons below."
+    embed = disnake.Embed(title = f"{idena_emoji} Idena Auth", description = description, color = 0x1215b5)
+    await channel.send(embed = embed, components = [disnake.ui.ActionRow(login_button, update_button, logout_button)])
+
+    # respond to the command
+    embed = disnake.Embed(title = ":white_check_mark: Message sent", description = f"The interactive message has been sent to <#{channel.id}>", color = 0x77b255)
+    await cmd.response.send_message(embed = embed)
+
+#
 # login command
 #
 @commands.cooldown(3, 60, commands.BucketType.user)
@@ -268,6 +291,8 @@ async def logout(cmd: disnake.CommandInteraction):
         embed = Embed(title = ":x: Not Logged In", description = description, color = 0xdd2e44)
         return await cmd.response.send_message(embed = embed, ephemeral = True)
     
+    await cmd.response.defer(with_message = True, ephemeral = True)
+
     # remove user from database and remove roles from all guilds
     discord_id = cmd.author.id
     await db.delete_user(discord_id)
@@ -281,11 +306,49 @@ async def logout(cmd: disnake.CommandInteraction):
     log.info(f"User {discord_id} logged out!")
     description = "You have been logged out from all servers!"
     embed = Embed(title = ":white_check_mark: Logged Out", description = description, color = 0x77b255)
-    await cmd.response.send_message(embed = embed, ephemeral = True)
+    await cmd.edit_original_message(embed = embed)
 
 @bot.before_slash_command_invoke
 async def before_slash_command_invoke(cmd: disnake.CommandInteraction):
-    log.info(f"User {cmd.author} used command {cmd.data.name} in guild {cmd.guild}")
+    log.info(f"User {cmd.author}({cmd.author.id}) used command {cmd.data.name} in guild {cmd.guild}({cmd.guild.id})")
+
+button_cooldowns = {}
+@bot.listen("on_button_click")
+async def button_listener(inter: disnake.MessageInteraction):
+    try:
+        user_id = inter.author.id
+        button_id = inter.component.custom_id
+
+        log.info(f"User {inter.author.name}({inter.author.id}) clicked button {button_id} in guild {inter.guild}({inter.guild.id})")
+
+        # cooldown
+        if user_id in button_cooldowns and button_id in button_cooldowns[user_id]:
+            last_clicked = button_cooldowns[user_id][button_id]
+
+            if datetime.now() < last_clicked + timedelta(seconds=15):
+                log.info(f"User {bot.get_user(user_id)}({user_id}) rate limited on button {button_id} in guild {inter.guild}({inter.guild.id})")
+
+                description = "You are clicking too fast! Please wait a moment."
+                embed = Embed(title = ":x: Cooldown", description = description, color = 0xdd2e44)
+                return await inter.response.send_message(embed = embed, ephemeral=True)
+
+        if user_id not in button_cooldowns:
+            button_cooldowns[user_id] = {}
+        button_cooldowns[user_id][button_id] = datetime.now()
+
+        # process button click
+        # calling the functions with a different Interaction type works because they use common attributes, gotta be careful
+        if inter.component.custom_id == "login":
+            await login(inter)
+        elif inter.component.custom_id == "update":
+            await update(inter)
+        elif inter.component.custom_id == "logout":
+            await logout(inter)
+    except Exception as e:
+        log.error(f"An error occurred in button interaction: {e}")
+        description = f"Something went wrong! :("
+        embed = disnake.Embed(title = ":x: Error", description = description, color = 0xdd2e44)
+        await inter.response.send_message(embed = embed, ephemeral = True)
 
 # Bot events
 @bot.event

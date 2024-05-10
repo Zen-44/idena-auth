@@ -27,19 +27,19 @@ async def update_role(guild_id, discord_id) -> str:
     address = await db.get_user_address(discord_id)
     if address is None:
         # remove all bound roles from the user in that guild
-        guild = bot.get_guild(int(guild_id))
+        guild= bot.get_guild(int(guild_id))
         if guild is None:
-            raise Exception(f"Guild {guild_id} not found")
+            raise Exception(f"Guild {guild}({guild_id}) not found")
         user = guild.get_member(int(discord_id))
         if user is None:
-            raise Exception(f"Member {discord_id} not found in guild {guild_id}")
+            raise Exception(f"Member {bot.get_user(discord_id).name}({discord_id}) not found in guild {guild}({guild_id})")
         for role in user.roles:
             if str(role.id) in list((await db.get_role_bindings(guild_id)).values()):
-                log.info(f"Removing role {role.name} from member {discord_id} in guild {guild_id}")
+                log.info(f"Removing role {role.name} from member {bot.get_user(discord_id).name}({discord_id}) in guild {guild}({guild_id})")
                 try:
                     await user.remove_roles(role)
                 except Exception as e:
-                    log.error(f"Error removing role {role.name} from member {discord_id} in guild {guild_id}: {e}")
+                    log.error(f"Error removing role {role.name} from member {bot.get_user(discord_id).name}({discord_id}) in guild {guild}({guild_id}): {e}")
         return ""
     
     state = await idena.get_identity_state(address)
@@ -50,15 +50,15 @@ async def update_role(guild_id, discord_id) -> str:
     # obtain guild, member and role objects
     guild = bot.get_guild(int(guild_id))
     if guild is None:
-        raise Exception(f"Guild {guild_id} not found")
+        raise Exception(f"Guild {guild}({guild_id}) not found")
 
     member = guild.get_member(int(discord_id))
     if member is None:
-        raise Exception(f"Member {discord_id} not found in guild {guild_id}")
+        raise Exception(f"Member {bot.get_user(discord_id).name}({discord_id}) not found in guild {guild}({guild_id})")
 
     role = guild.get_role(int(role_id))
     if role is None:
-        raise Exception(f"Role {role_id} not found in guild {guild_id}")
+        raise Exception(f"Role {role_id} not found in guild {guild}({guild_id})")
     
     # check if the user has the role already
     if role_id in [str(role.id) for role in member.roles]:
@@ -69,13 +69,13 @@ async def update_role(guild_id, discord_id) -> str:
         if str(old_role.id) in list((await db.get_role_bindings(guild_id)).values()):
             try:
                 await member.remove_roles(old_role)
-                log.info(f"Removed role {old_role.name} from member {discord_id}")
+                log.info(f"Removed role {old_role.name} from member {bot.get_user(discord_id).name}({discord_id})")
             except Exception as e:
-                log.error(f"Error removing role {old_role.name} from member {discord_id}: {e}")
+                log.error(f"Error removing role {old_role.name} from member {bot.get_user(discord_id).name}({discord_id}): {e}")
     
     # add the new role
     await member.add_roles(role)
-    log.info(f"Added role {role.name} to member {discord_id} in guild {guild_id}")
+    log.info(f"Added role {role.name} to member {bot.get_user(discord_id).name}({discord_id}) in guild {guild}({guild_id})")
 
     return role_id
 
@@ -90,14 +90,14 @@ async def update_all_roles(guild_id = None):
     for guild in guilds:
         guild_id = guild[0]
         if not await db.is_guild_configured(guild_id):
-            log.warning(f"Guild {guild_id} not configured, skipping update")
+            log.warning(f"Guild {guild}({guild_id}) not configured, skipping update")
             continue
         for user in users:
             discord_id = user[0]
             try:
                 await update_role(guild_id, discord_id)
             except Exception as e:
-                log.error(f"Error updating roles for user {discord_id} in guild {guild_id}: {e}")
+                log.error(f"Error updating roles for user {bot.get_user(discord_id).name}({discord_id}) in guild {guild}({guild_id}): {e}")
     log.info("All roles updated")
 
 async def scheduled_update(hour, minute):
@@ -126,7 +126,7 @@ async def protect(cmd: disnake.CommandInteraction):
     # checks if the user has permission to use the command
     bot_manager = await db.get_bot_manager(cmd.guild.id)
     if not cmd.author.guild_permissions.administrator and (bot_manager != None or bot_manager not in [role.id for role in cmd.author.roles]):
-        log.warning(f"User {cmd.author} tried to use a command without permission")
+        log.warning(f"User {cmd.author}({cmd.author.id}) tried to use a command without permission")
         return await cmd.response.send_message("You do not have permission to use this command")
     return 1
 
@@ -301,9 +301,9 @@ async def logout(cmd: disnake.CommandInteraction):
         try:
             await update_role(guild, discord_id)
         except Exception as e:
-            log.error(f"Error removing roles for user {discord_id} in guild {guild}: {e}")
+            log.error(f"Error removing roles for user {bot.get_user(discord_id).name}({discord_id}): {e}")
 
-    log.info(f"User {discord_id} logged out!")
+    log.info(f"User {bot.get_user(discord_id).name}({discord_id}) logged out!")
     description = "You have been logged out from all servers!"
     embed = Embed(title = ":white_check_mark: Logged Out", description = description, color = 0x77b255)
     await cmd.edit_original_message(embed = embed)
@@ -357,12 +357,12 @@ async def on_guild_join(guild):
 
 @bot.event
 async def on_guild_remove(guild):
-    log.info(f"Bot was removed from guild {guild}")
+    log.info(f"Bot was removed from guild {guild}({guild.id})")
 
 @bot.event
 async def on_slash_command_error(ctx, error):
     if isinstance(error, commands.CommandOnCooldown):
-        log.info(f"User {ctx.author} was rate limited on command {ctx.data.name} in guild {ctx.guild}")
+        log.info(f"User {ctx.author}({ctx.author.id}) was rate limited on command {ctx.data.name} in guild {ctx.guild}({ctx.guild.id})")
         description = f"This command is on cooldown. Try again in {error.retry_after:.0f} seconds."
         embed = Embed(title = ":x: Command on Cooldown", description = description, color = 0xdd2e44)
         await ctx.response.send_message(embed = embed, ephemeral = True)
@@ -371,7 +371,7 @@ async def on_slash_command_error(ctx, error):
             description = f"You can not use this command in a DM channel."
             embed = Embed(title = ":x: Error", description = description, color = 0xdd2e44)
             return await ctx.response.send_message(embed = embed, ephemeral = True)
-        log.error(f"An error occurred in command {ctx.data.name} in guild {ctx.guild}: {error}")
+        log.error(f"An error occurred in command {ctx.data.name} in guild {ctx.guild}({ctx.guild.id}): {error}")
         description = f"Something went wrong! :("
         embed = Embed(title = ":x: Error", description = description, color = 0xdd2e44)
         await ctx.response.send_message(embed = embed, ephemeral = True)

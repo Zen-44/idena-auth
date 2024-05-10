@@ -79,7 +79,7 @@ async def generate_token(user_id: str) -> str:
     cursor.execute("DELETE FROM pending_auth WHERE user_id = ?", (user_id,))
     cursor.execute("INSERT INTO pending_auth (user_id, token) VALUES (?, ?)", (user_id, token))
     conn.commit()
-    log.info(f"Generated token {token} for user {user_id}")
+    log.info(f"Generated token {token} for user id {user_id}")
     return token
 
 async def generate_nonce(token: str, address: str) -> str:
@@ -94,7 +94,7 @@ async def set_user(user_id: str, address: str):
         cursor.execute("DELETE FROM users WHERE user_id = ?", (user_id,))
         cursor.execute("INSERT INTO users (user_id, address) VALUES (?, ?)", (user_id, address))
     except sqlite3.IntegrityError:
-        log.warning(f"User {user_id} tried to login with an already existing address: {address}")
+        log.warning(f"User id {user_id} tried to login with an already existing address: {address}")
         conn.rollback()
         return False
     conn.commit()

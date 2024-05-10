@@ -97,7 +97,7 @@ async def authenticate():
         })
     
     await db.remove_pending_auth(req['token'])
-    log.info(f"User {user_id} successfully authenticated as {address}")
+    log.info(f"User id {user_id} successfully authenticated as {address}")
 
     return jsonify({
       "success": True,

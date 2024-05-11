@@ -374,7 +374,10 @@ async def on_slash_command_error(ctx, error):
         log.error(f"An error occurred in command {ctx.data.name} in guild {ctx.guild}({ctx.guild.id}): {error}")
         description = f"Something went wrong! :("
         embed = Embed(title = ":x: Error", description = description, color = 0xdd2e44)
-        await ctx.response.send_message(embed = embed, ephemeral = True)
+        try:
+            await ctx.response.send_message(embed = embed, ephemeral = True)
+        except Exception:
+            await ctx.edit_original_message(embed = embed)
         
 @bot.event
 async def on_ready():

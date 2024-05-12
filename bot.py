@@ -125,7 +125,7 @@ async def hourly_update():
 async def protect(cmd: disnake.CommandInteraction):
     # checks if the user has permission to use the command
     bot_manager = await db.get_bot_manager(cmd.guild.id)
-    if not cmd.author.guild_permissions.administrator and (bot_manager != None or bot_manager not in [role.id for role in cmd.author.roles]):
+    if not cmd.author.guild_permissions.administrator and (bot_manager == None or bot_manager not in [role.id for role in cmd.author.roles]):
         log.warning(f"User {cmd.author}({cmd.author.id}) tried to use a command without permission")
         return await cmd.response.send_message("You do not have permission to use this command")
     return 1

@@ -22,82 +22,84 @@ intents = disnake.Intents.default()
 intents.members = True
 bot = commands.InteractionBot(intents = intents)
 
-async def update_role(guild_id, discord_id) -> str:
+async def update_role(guild: disnake.Guild, member: disnake.Member) -> str:
     # get role id based on Idena status
-    address = await db.get_user_address(discord_id)
+    address = await db.get_user_address(member.id)
+
     if address is None:
-        # remove all bound roles from the user in that guild
-        guild= bot.get_guild(int(guild_id))
-        if guild is None:
-            raise Exception(f"Guild {guild}({guild_id}) not found")
-        user = guild.get_member(int(discord_id))
-        if user is None:
-            raise Exception(f"Member {bot.get_user(discord_id).name}({discord_id}) not found in guild {guild}({guild_id})")
-        for role in user.roles:
-            if str(role.id) in list((await db.get_role_bindings(guild_id)).values()):
-                log.info(f"Removing role {role.name} from member {bot.get_user(discord_id).name}({discord_id}) in guild {guild}({guild_id})")
+        # remove all bound roles from the member in that guild
+        for role in member.roles:
+            if role.id in list((await db.get_role_bindings(guild.id)).values()):
                 try:
-                    await user.remove_roles(role)
+                    await member.remove_roles(role)
+                    log.info(f"Removed role {role.name} from member {member.name}({member.id}) in guild {guild}({guild.id})")
                 except Exception as e:
-                    log.error(f"Error removing role {role.name} from member {bot.get_user(discord_id).name}({discord_id}) in guild {guild}({guild_id}): {e}")
+                    log.error(f"Error removing role {role.name} from member {member.name}({member.id}) in guild {guild}({guild.id}): {e}")
         return ""
     
+    # idena state
     state = await idena.get_identity_state(address)
     if state.lower() not in ["undefined", "newbie", "verified", "human", "suspended", "zombie"]:
         state = "undefined"
-    role_id = (await db.get_role_bindings(guild_id))[state.lower()]
 
-    # obtain guild, member and role objects
-    guild = bot.get_guild(int(guild_id))
-    if guild is None:
-        raise Exception(f"Guild {guild}({guild_id}) not found")
+    # role that should be assigned
+    role_bindings = await db.get_role_bindings(guild.id)
+    role_id = role_bindings[state.lower()]
 
-    member = guild.get_member(int(discord_id))
-    if member is None:
-        raise Exception(f"Member {bot.get_user(discord_id).name}({discord_id}) not found in guild {guild}({guild_id})")
-
-    role = guild.get_role(int(role_id))
+    role = guild.get_role(role_id)
     if role is None:
-        raise Exception(f"Role {role_id} not found in guild {guild}({guild_id})")
+        raise Exception(f"Role {role_id} not found in guild {guild}({guild.id})")
     
     # check if the user has the role already
-    if role_id in [str(role.id) for role in member.roles]:
+    if role_id in [role.id for role in member.roles]:
         return role_id
     
     # remove other (bound) roles
     for old_role in member.roles:
-        if str(old_role.id) in list((await db.get_role_bindings(guild_id)).values()):
+        if old_role.id in list(role_bindings.values()):
             try:
                 await member.remove_roles(old_role)
-                log.info(f"Removed role {old_role.name} from member {bot.get_user(discord_id).name}({discord_id})")
+                log.info(f"Removed role {old_role.name} from member {member.name}({member.id})")
             except Exception as e:
-                log.error(f"Error removing role {old_role.name} from member {bot.get_user(discord_id).name}({discord_id}): {e}")
+                log.error(f"Error removing role {old_role.name} from member {member.name}({member.id}): {e}")
     
     # add the new role
     await member.add_roles(role)
-    log.info(f"Added role {role.name} to member {bot.get_user(discord_id).name}({discord_id}) in guild {guild}({guild_id})")
+    log.info(f"Added role {role.name} to member {member.name}({member.id}) in guild {guild}({guild.id})")
 
     return role_id
 
-async def update_all_roles(guild_id = None):
+async def update_all_roles(guild_id: int = None):
     log.info("Updating all roles")
     if guild_id:
-        guilds = [(guild_id,)]
+        guilds = [guild_id]
     else:
         guilds = await db.get_guilds()
 
     users = await db.get_all_users()
-    for guild in guilds:
-        guild_id = guild[0]
+    for guild_id in guilds:
         if not await db.is_guild_configured(guild_id):
-            log.warning(f"Guild {guild}({guild_id}) not configured, skipping update")
+            log.warning(f"Guild {await bot.fetch_guild(guild_id)}({guild_id}) not configured, skipping update")
             continue
-        for user in users:
-            discord_id = user[0]
+
+        # fetch guild
+        try:
+            guild = await bot.fetch_guild(guild_id)
+            log.info(f"Updating roles for guild {guild}({guild_id})")
+        except disnake.errors.NotFound:
+            log.error(f"Guild {guild_id} not found, skipping update")
+            continue
+
+        for user_id in users:
             try:
-                await update_role(guild_id, discord_id)
+                user = await guild.fetch_member(user_id)
+                await update_role(guild, user)
+            except disnake.errors.NotFound:
+                log.info(f"Member {(await bot.fetch_user(user_id)).name}({user_id}) not found in guild {guild}({guild_id})")
+                continue
             except Exception as e:
-                log.error(f"Error updating roles for user {bot.get_user(discord_id).name}({discord_id}) in guild {guild}({guild_id}): {e}")
+                log.error(f"Error updating roles for user {(await bot.fetch_user(user_id)).name}({user_id}) in guild {guild}({guild_id}): {e}")
+
     log.info("All roles updated")
 
 async def scheduled_update(hour, minute):
@@ -272,7 +274,7 @@ async def login(cmd: disnake.CommandInteraction):
 @commands.cooldown(3, 60, commands.BucketType.user)
 @bot.slash_command(description = "Update your roles")
 async def update(cmd: disnake.CommandInteraction):
-    role_id = await update_role(cmd.guild.id, cmd.author.id)
+    role_id = await update_role(cmd.guild, cmd.author)
 
     if role_id == "":
         description = "You are not logged in!"
@@ -299,16 +301,18 @@ async def logout(cmd: disnake.CommandInteraction):
     await cmd.response.defer(with_message = True, ephemeral = True)
 
     # remove user from database and remove roles from all guilds
-    discord_id = cmd.author.id
-    await db.delete_user(discord_id)
-    for guild in await db.get_guilds():
-        guild = guild[0]
+    await db.delete_user(cmd.author.id)
+    for guild_id in await db.get_guilds():
         try:
-            await update_role(guild, discord_id)
+            guild = await bot.fetch_guild(guild_id)
+            member = await guild.fetch_member(cmd.author.id)
+            await update_role(guild, member)
+        except disnake.errors.NotFound:
+            log.info(f"Member {cmd.author.name}({cmd.author.id}) not found in guild {guild}({guild.id})")
         except Exception as e:
-            log.error(f"Error removing roles for user {bot.get_user(discord_id).name}({discord_id}): {e}")
+            log.error(f"Error removing roles for user {cmd.author.name}({cmd.author.id}): {e}")
 
-    log.info(f"User {bot.get_user(discord_id).name}({discord_id}) logged out!")
+    log.info(f"User {cmd.author.name}({cmd.author.id}) logged out!")
     description = "You have been logged out from all servers!"
     embed = Embed(title = ":white_check_mark: Logged Out", description = description, color = 0x77b255)
     await cmd.edit_original_message(embed = embed)
@@ -331,7 +335,7 @@ async def button_listener(inter: disnake.MessageInteraction):
             last_clicked = button_cooldowns[user_id][button_id]
 
             if datetime.now() < last_clicked + timedelta(seconds=15):
-                log.info(f"User {bot.get_user(user_id)}({user_id}) rate limited on button {button_id} in guild {inter.guild}({inter.guild.id})")
+                log.info(f"User {inter.author.name}({user_id}) rate limited on button {button_id} in guild {inter.guild}({inter.guild.id})")
 
                 description = "You are clicking too fast! Please wait a moment."
                 embed = Embed(title = ":x: Cooldown", description = description, color = 0xdd2e44)

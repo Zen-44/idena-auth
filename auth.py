@@ -57,7 +57,7 @@ async def start_session():
     log.info(f"Begin authentication for user {discord_id}")
 
     if (discord_id is None):
-        log.info(f"Invalid token {token}")
+        log.warning(f"Invalid token {token}")
         return jsonify({
             "success": False,
             "error": "Invalid token"
@@ -76,13 +76,10 @@ async def authenticate():
     req = request.get_json()
 
     if not await validate_sig(req):
-        log.info(f"Invalid signature for user {req['token']}")
+        log.warning(f"Invalid signature for token {req['token']}")
         return jsonify({
             "success": False,
-            "data":{
-                "authenticated": False,
-                "error": "Invalid signature"
-            }
+            "error": "Invalid signature!"
         })
     
     address = await db.get_pending_address(req['token'])
@@ -90,10 +87,7 @@ async def authenticate():
     if not await db.set_user(user_id, address):
         return jsonify({
             "success": False,
-            "data": {
-                "authenticated": False,
-                "error": "Address was registered already"
-            }
+            "error": "Address is logged in already!"
         })
     
     await db.remove_pending_auth(req['token'])

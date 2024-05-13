@@ -6,7 +6,15 @@ screen -X -S site quit
 
 cd idena-auth
 screen -dmS bot python3.11 bot.py
-screen -dmS site gunicorn -b :443 --certfile=/root/idena-auth/certs/discord-bot.idena.cloud.crt --keyfile=/root/idena-auth/certs/discord-bot.idena.cloud.key auth:app
+
+# Start the site
+
+# gunicorn manages the ssl cert
+# screen -dmS site gunicorn -b :443 --certfile=[CERT_PATH] --keyfile=[CERT_KEY_PATH] auth:app
+
+# nginx manages the ssl cert
+# screen -dmS site gunicorn -b :PORT auth:app
+
 cd
 
 # crontab for reboots

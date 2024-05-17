@@ -54,9 +54,8 @@ async def get_role_bindings(guild_id):
     return role_bindings
 
 async def is_guild_configured(guild_id) -> bool:
-    cursor.execute("SELECT * FROM guilds WHERE guild_id = ?", (guild_id,))
-    guild_roles = cursor.fetchone()
-    if None in guild_roles:
+    role_bindings = await get_role_bindings(guild_id)
+    if None in list(role_bindings.values()):
         return False
     return True
 

@@ -15,4 +15,4 @@ A role without administrator permissions may also be assigned to have access to 
 Admins may also setup a channel where the bot will post a message with buttons for login, update and logout operations using `/send_interactive_message`. (Send messages and Embed links permissions are necessary if the old invite link was used)       
 
 Don't forget to drag the bot's role above all others that it manages in server settings.       
-NOTE: The autoupdate feature will not work unless all Idena statuses are bound to a role and a bot manager is set.
+NOTE: The autoupdate feature will not work unless all Idena statuses are bound to a role.

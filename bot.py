@@ -212,7 +212,7 @@ async def forceupdateall(cmd: disnake.CommandInteraction):
         return
     
     if not await db.is_guild_configured(cmd.guild.id):
-        description = "This server is not configured! Please bind roles to Idena statuses and set a bot manager."
+        description = "This server is not configured! Please bind roles to Idena statuses."
         embed = Embed(title = ":x: Guild Not Configured", description = description, color = 0xdd2e44)
         return await cmd.response.send_message(embed = embed)
     

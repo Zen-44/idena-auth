@@ -7,11 +7,11 @@ def get_logger(name: str):
 
     # Create a file handler
     handler = logging.FileHandler('bot.log', encoding = 'utf-8')
-    handler.setLevel(logging.INFO)
+    handler.setLevel(logging.DEBUG)
 
     # Create a console handler
     console_handler = logging.StreamHandler()
-    console_handler.setLevel(logging.INFO)
+    console_handler.setLevel(logging.DEBUG)
 
     # Create a formatter and add it to the handlers
     formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')

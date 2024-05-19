@@ -95,7 +95,7 @@ async def update_all_roles(guild_id: int = None):
                 user = await guild.fetch_member(user_id)
                 await update_role(guild, user)
             except disnake.errors.NotFound:
-                log.info(f"Member {(await bot.fetch_user(user_id)).name}({user_id}) not found in guild {guild}({guild_id})")
+                log.debug(f"Member {(await bot.fetch_user(user_id)).name}({user_id}) not found in guild {guild}({guild_id})")
                 continue
             except Exception as e:
                 log.error(f"Error updating roles for user {(await bot.fetch_user(user_id)).name}({user_id}) in guild {guild}({guild_id}): {e}")
@@ -308,7 +308,7 @@ async def logout(cmd: disnake.CommandInteraction):
             member = await guild.fetch_member(cmd.author.id)
             await update_role(guild, member)
         except disnake.errors.NotFound:
-            log.info(f"Member {cmd.author.name}({cmd.author.id}) not found in guild {guild}({guild.id})")
+            log.debug(f"Member {cmd.author.name}({cmd.author.id}) not found in guild {guild}({guild.id})")
         except Exception as e:
             log.error(f"Error removing roles for user {cmd.author.name}({cmd.author.id}): {e}")
 

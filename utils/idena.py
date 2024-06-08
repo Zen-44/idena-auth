@@ -1,5 +1,6 @@
 import aiohttp
 import os
+from aiocache import cached
 from dotenv import load_dotenv
 from utils.logger import get_logger
 
@@ -9,6 +10,7 @@ load_dotenv(override = True)
 NODE_URL = os.getenv("NODE_URL")
 NODE_KEY = os.getenv("NODE_KEY")
 
+@cached(ttl = 180)
 async def get_identity_state(address: str) -> str:
     call_data = {
         "method": "dna_identity",

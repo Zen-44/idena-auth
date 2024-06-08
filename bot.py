@@ -60,10 +60,10 @@ async def update_role(guild: disnake.Guild, member: disnake.Member) -> str:
     # update roles
     updated_roles = [new_role]
     updated_roles.extend([role for role in member.roles if role not in roles_to_remove])
-    log.info(updated_roles)
     await member.edit(roles = updated_roles)
     
-    log.info(f"Removed roles {', '.join([role.name for role in roles_to_remove])} from member {member.name}({member.id}) in guild {guild}({guild.id})")
+    if len(roles_to_remove):
+        log.info(f"Removed roles {', '.join([role.name for role in roles_to_remove])} from member {member.name}({member.id}) in guild {guild}({guild.id})")
     log.info(f"Added role {new_role.name} to member {member.name}({member.id}) in guild {guild}({guild.id})")
 
     return role_id
@@ -89,13 +89,13 @@ async def update_all_roles(guild_id: int = None):
             log.error(f"Guild {guild_id} not found, skipping update")
             continue
 
+        fetched_users = await guild.fetch_members().flatten()
         for user_id in users:
             try:
-                user = await guild.fetch_member(user_id)
+                user = next((user for user in fetched_users if user.id == user_id), None)
+                if user is None:
+                    continue
                 await update_role(guild, user)
-            except disnake.errors.NotFound:
-                log.debug(f"Member {(await bot.fetch_user(user_id)).name}({user_id}) not found in guild {guild}({guild_id})")
-                continue
             except Exception as e:
                 log.error(f"Error updating roles for user {(await bot.fetch_user(user_id)).name}({user_id}) in guild {guild}({guild_id}): {e}")
 

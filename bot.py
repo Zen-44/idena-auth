@@ -215,6 +215,11 @@ async def forceupdateall(cmd: disnake.CommandInteraction):
         description = "This server is not configured! Please bind roles to Idena statuses."
         embed = Embed(title = ":x: Guild Not Configured", description = description, color = 0xdd2e44)
         return await cmd.response.send_message(embed = embed)
+
+    if datetime.now() >= datetime.now().replace(hour = 15, minute = 30, second = 0) and datetime.now() <= datetime.now().replace(hour = 16, minute = 0, second = 0):
+        description = "Running this command right now might interfere with the auto update feature.\nAuto update will take place at 15:45 UTC."
+        embed = Embed(title = ":x: Please wait", description = description, color = 0xdd2e44)
+        return await cmd.response.send_message(embed = embed)
     
     await cmd.response.defer()
 

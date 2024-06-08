@@ -28,13 +28,13 @@ async def update_role(guild: disnake.Guild, member: disnake.Member) -> str:
 
     if address is None:
         # remove all bound roles from the member in that guild
-        for role in member.roles:
-            if role.id in list((await db.get_role_bindings(guild.id)).values()):
+        for new_role in member.roles:
+            if new_role.id in list((await db.get_role_bindings(guild.id)).values()):
                 try:
-                    await member.remove_roles(role)
-                    log.info(f"Removed role {role.name} from member {member.name}({member.id}) in guild {guild}({guild.id})")
+                    await member.remove_roles(new_role)
+                    log.info(f"Removed role {new_role.name} from member {member.name}({member.id}) in guild {guild}({guild.id})")
                 except Exception as e:
-                    log.error(f"Error removing role {role.name} from member {member.name}({member.id}) in guild {guild}({guild.id}): {e}")
+                    log.error(f"Error removing role {new_role.name} from member {member.name}({member.id}) in guild {guild}({guild.id}): {e}")
         return ""
     
     # idena state
@@ -46,26 +46,25 @@ async def update_role(guild: disnake.Guild, member: disnake.Member) -> str:
     role_bindings = await db.get_role_bindings(guild.id)
     role_id = role_bindings[state.lower()]
 
-    role = guild.get_role(role_id)
-    if role is None:
+    new_role = guild.get_role(role_id)
+    if new_role is None:
         raise Exception(f"Role {role_id} not found in guild {guild}({guild.id})")
     
     # check if the user has the role already
     if role_id in [role.id for role in member.roles]:
         return role_id
     
-    # remove other (bound) roles
-    for old_role in member.roles:
-        if old_role.id in list(role_bindings.values()):
-            try:
-                await member.remove_roles(old_role)
-                log.info(f"Removed role {old_role.name} from member {member.name}({member.id})")
-            except Exception as e:
-                log.error(f"Error removing role {old_role.name} from member {member.name}({member.id}): {e}")
+    # get roles that should be removed
+    roles_to_remove = [role for role in member.roles if role.id in list(role_bindings.values())]
     
-    # add the new role
-    await member.add_roles(role)
-    log.info(f"Added role {role.name} to member {member.name}({member.id}) in guild {guild}({guild.id})")
+    # update roles
+    updated_roles = [new_role]
+    updated_roles.extend([role for role in member.roles if role not in roles_to_remove])
+    log.info(updated_roles)
+    await member.edit(roles = updated_roles)
+    
+    log.info(f"Removed roles {', '.join([role.name for role in roles_to_remove])} from member {member.name}({member.id}) in guild {guild}({guild.id})")
+    log.info(f"Added role {new_role.name} to member {member.name}({member.id}) in guild {guild}({guild.id})")
 
     return role_id
 

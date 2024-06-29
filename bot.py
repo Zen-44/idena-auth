@@ -16,6 +16,7 @@ log = get_logger("BOT")
 load_dotenv(override = True)
 DISCORD_TOKEN = os.getenv("DISCORD_TOKEN")
 AUTH_URL = os.getenv("AUTH_URL")
+BOT_OWNER = int(os.getenv("BOT_OWNER"))
 
 # Create discord bot
 intents = disnake.Intents.default()
@@ -229,6 +230,30 @@ async def forceupdateall(cmd: disnake.CommandInteraction):
     await cmd.edit_original_message(embed = embed)
 
 #
+# dev force update all
+#
+@bot.slash_command(description = "Command used for debugging purposes by the bot developer")
+async def dev_forceupdateall(cmd: disnake.CommandInteraction, guild_id: str = None):
+    guild_id = int(guild_id) if guild_id else None
+    if cmd.author.id != BOT_OWNER:
+        log.info(f"User {cmd.author.name} denied permission for dev command")
+        description = "Only the bot owner can run this command."
+        embed = Embed(title = ":x: Permission denied", description = description, color = 0xdd2e44)
+        return await cmd.response.send_message(embed = embed)
+    
+    if guild_id and not await db.guild_exists(guild_id, add_to_db = False):
+        description = "The guild provided is not in the database."
+        embed = Embed(title = ":x: Error", description = description, color = 0xdd2e44)
+        return await cmd.response.send_message(embed = embed)
+
+    await cmd.response.defer()
+    await update_all_roles(guild_id)
+
+    description = "Roles have been updated for all users!"
+    embed = Embed(title = ":white_check_mark: Roles Updated", description = description, color = 0x77b255)
+    return await cmd.edit_original_message(embed = embed)
+
+#
 # send bot interactive message
 #
 @bot.slash_command(description = "Send a message with buttons for users to click")
@@ -323,7 +348,10 @@ async def logout(cmd: disnake.CommandInteraction):
 
 @bot.before_slash_command_invoke
 async def before_slash_command_invoke(cmd: disnake.CommandInteraction):
-    log.info(f"User {cmd.author}({cmd.author.id}) used command {cmd.data.name} in guild {cmd.guild}({cmd.guild.id})")
+    if cmd.guild:
+        log.info(f"User {cmd.author}({cmd.author.id}) used command {cmd.data.name} in guild {cmd.guild}({cmd.guild.id})")
+    else:
+        log.info(f"User {cmd.author}({cmd.author.id}) used command {cmd.data.name}")
 
 button_cooldowns = {}
 @bot.listen("on_button_click")
@@ -384,7 +412,7 @@ async def on_slash_command_error(ctx, error):
             description = f"You can not use this command in a DM channel."
             embed = Embed(title = ":x: Error", description = description, color = 0xdd2e44)
             return await ctx.response.send_message(embed = embed, ephemeral = True)
-        log.error(f"An error occurred in command {ctx.data.name} in guild {ctx.guild}({ctx.guild.id}): {error}")
+        log.error(f"An error occurred in command {ctx.data.name}: {error}")
         description = f"Something went wrong! :("
         embed = Embed(title = ":x: Error", description = description, color = 0xdd2e44)
         try:

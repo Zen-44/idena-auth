@@ -65,11 +65,12 @@ async def get_guilds():
     guilds = [int(guild[0]) for guild in guilds]
     return guilds
 
-async def guild_exists(guild_id) -> bool:
+async def guild_exists(guild_id, add_to_db = True) -> bool:
     cursor.execute("SELECT * FROM guilds WHERE guild_id = ?", (guild_id,))
     guild = cursor.fetchone()
     if guild is None:
-        await add_guild(guild_id)
+        if add_to_db:
+            await add_guild(guild_id)
         return False
     return True
 

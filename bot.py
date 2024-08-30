@@ -192,7 +192,7 @@ async def getbindings(cmd: disnake.CommandInteraction):
 #
 # set bot manager command
 #
-@bot.slash_command(description = "Role that has access to all bot commands")
+@bot.slash_command(description = "Role that can change bot settings")
 async def setbotmanager(cmd: disnake.CommandInteraction, role: disnake.Role):
     if await protect(cmd) != 1:
         return
